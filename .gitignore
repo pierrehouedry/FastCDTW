@@ -1,0 +1,50 @@
+# ---------------------------------------------------------------------------
+# Anonymous package: only the library, the experiment code, the synthetic
+# data and the tests are tracked. Everything below stays local.
+# ---------------------------------------------------------------------------
+
+# Python / tooling
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.ipynb_checkpoints/
+build/
+dist/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Everything an experiment writes: numbers, figures, checkpoints, logs.
+# Every script writes into a results/ folder next to it (created on first run).
+results/
+experiments/_archive/
+*.log
+*.out
+*.err
+*.stdout
+*.stderr
+*.lock
+*.npz
+*.pt
+*.pth
+*.ckpt
+
+# Machine-specific: sync config and batch-job scripts (hard-coded paths)
+mutagen.yml
+mutagen.yml.lock
+job.sh
+*_job.sh
+submit_*.sh
+# dev helper that reads files outside this repo
+experiments/clustering/import_baselines.py
+
+# Local notes
+NOTES.md
+
+# The packaged archive itself
+*.zip

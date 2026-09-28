@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastcdtw"
+version = "0.1.0"
+description = "Fast Differentiable approximation of CDTW"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.1", "numpy>=1.24"]
+
+[project.optional-dependencies]
+ot = ["pot>=0.9"]
+experiments = ["tslearn>=0.6", "matplotlib>=3.7"]
+dev = ["pytest>=7"]
+
+[tool.setuptools]
+packages = ["fastcdtw"]
