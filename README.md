@@ -14,9 +14,6 @@ The cost of a warping is computed in closed form for piecewise-linear (PL) warpi
 1. K. Buchin, A. Nusser, S. Wong. Computing continuous dynamic time warping of time series in polynomial time. *Journal of Computational Geometry*, 2025.
 2. H. Sakoe, S. Chiba. Dynamic programming algorithm optimization for spoken word recognition. *IEEE Trans. Acoustics, Speech, and Signal Processing*, 1978.
 3. E. Le Naour et al. Time series continuous modeling for imputation and forecasting with implicit neural representations. *TMLR*, 2024.
-4. F. Petitjean, A. Ketterlin, P. Gançarski. A global averaging method for dynamic time warping, with applications to clustering. *Pattern Recognition*, 2011.
-5. M. Cuturi, M. Blondel. Soft-DTW: a differentiable loss function for time-series. *ICML*, 2017.
-6. H. A. Dau et al. The UCR time series archive. *IEEE/CAA Journal of Automatica Sinica*, 2019.
 
 ## Citation
 
