@@ -3,7 +3,7 @@
 Code for *Fast Gradient-Based Approximation of Continuous Dynamic Time Warping*.
 FastCDTW computes Continuous DTW (CDTW) [1], the continuous-time counterpart of DTW [2], by gradient descent on a parametrized warping function.
 The cost of a warping is computed in closed form for piecewise-linear (PL) warpings, or by an unbiased Monte Carlo (MC) estimate for smooth ones such as implicit neural representations [3]; both give gradients with respect to the warping and the series, and run batched on GPU.
-`fastcdtw/` is the library; `experiments/averaging/` compares FastCDTW barycenters with DBA [4] and Soft-DTW [5] (run `make_toy.py` first to build the data), and `experiments/clustering/` runs 1-NN classification on the UCR archive [6].
+`fastcdtw/` is the library; `experiments/averaging/` allows to re-run the experiments from the article.
 
 ![Barycenters of three synthetic families](figures/barycenters_grid.png)
 
