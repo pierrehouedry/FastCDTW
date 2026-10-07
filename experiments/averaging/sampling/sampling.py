@@ -17,8 +17,8 @@ for p in (ROOT, HERE.parent):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from data import load  # noqa: E402
-from fastcdtw import fm_dtw, phi_from_raw  # noqa: E402
+from data import load
+from fastcdtw import fm_dtw, phi_from_raw
 
 METHODS = {"dtw": ("DTW", "#EE854A"),
            "softdtw": ("Soft-DTW", "#6ACC64"),

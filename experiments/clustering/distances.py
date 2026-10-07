@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from fastcdtw import as_tensor, cdist_fm_dtw_fit  # noqa: F401  (re-exported)
+from fastcdtw import cdist_fm_dtw_fit
 
 fastcdtw_cdist = cdist_fm_dtw_fit
 

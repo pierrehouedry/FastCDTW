@@ -95,6 +95,58 @@ def softdtw_barycenter(Y, weights=None, gamma: float = 1.0, max_iter: int = 200,
                                max_iter=max_iter, tol=tol))
 
 
+def _one_series(C) -> np.ndarray:
+    """A single series, (T,), (T, d) or (1, T, d) -> float64 (T, d)."""
+    C = C.detach().cpu().numpy() if isinstance(C, torch.Tensor) else np.asarray(C)
+    C = C.astype(np.float64)
+    if C.ndim == 3:
+        C = C[0]
+    return C[:, None] if C.ndim == 1 else C
+
+
+def phi_from_dtw_path(C, Y) -> np.ndarray:
+    """(N, T) warpings read off the DTW paths between C and each Y_i: phi_i(t_k)
+    is the mean centroid time matched to t_k (series time -> centroid time)."""
+    from tslearn.metrics import dtw_path
+
+    C, Y = _one_series(C), _as_numpy(Y)
+    t_c = np.linspace(0.0, 1.0, C.shape[0])
+    phi = np.empty(Y.shape[:2])
+    for i, y in enumerate(Y):
+        path, _ = dtw_path(C, y)
+        acc, cnt = np.zeros(y.shape[0]), np.zeros(y.shape[0])
+        for j, k in path:
+            acc[k] += t_c[j]
+            cnt[k] += 1
+        phi[i] = acc / cnt
+    return phi
+
+
+def raw_from_phi(phi, floor: float = 1e-3) -> np.ndarray:
+    """Inverse of ``phi_from_raw`` (softplus increments, then normalised), scaled so
+    that the identity maps to raw = 0; increments are floored at ``floor`` times
+    the identity's so that flat stretches of a DTW path stay trainable."""
+    phi = np.asarray(phi, dtype=np.float64)
+    inc = np.diff(phi, axis=-1) * (phi.shape[-1] - 1) * np.log(2.0)
+    inc = np.maximum(inc, floor * np.log(2.0))
+    return np.log(np.expm1(inc))
+
+
+def _phi_on(init_phi, n: int) -> np.ndarray:
+    """(N, T) warpings on a uniform grid -> (N, n) on a uniform grid."""
+    init_phi = np.asarray(init_phi, dtype=np.float64)
+    if init_phi.shape[-1] == n:
+        return init_phi
+    t_old, t_new = np.linspace(0, 1, init_phi.shape[-1]), np.linspace(0, 1, n)
+    return np.stack([np.interp(t_new, t_old, p) for p in init_phi])
+
+
+def dba_warm_start(Y, weights=None, max_iter: int = 50):
+    """DBA barycenter (from the Euclidean mean) and its DTW warpings."""
+    C = dtw_barycenter(Y, weights=weights, max_iter=max_iter)
+    return C, phi_from_dtw_path(C, Y)
+
+
 class INRCentroid(nn.Module):
     """Fourier-feature MLP, t in [0, 1] -> R^d. ``n_freq = 0`` feeds t raw."""
 
@@ -175,8 +227,10 @@ def fastcdtw_inr_barycenter(Y, t_y=None, weights=None, lr: float = 5e-3,
                          n_eval: int = 20, c_hidden: int = 64, c_freq: int = 8,
                          c_layers: int = 5, warp_n: int = 0,
                          init_steps: int = 2000, seed: int = 42,
-                         device: str | torch.device = "cpu", verbose: bool = True):
-    """FastCDTW barycenter, INR centroid, Monte Carlo integral."""
+                         device: str | torch.device = "cpu", verbose: bool = True,
+                         init=None, init_phi=None):
+    """FastCDTW barycenter, INR centroid, Monte Carlo integral. ``init`` / ``init_phi``:
+    centroid and (N, T) warpings to start from (default: Euclidean mean, identity)."""
     device = torch.device(device)
     torch.manual_seed(seed)
 
@@ -190,9 +244,14 @@ def fastcdtw_inr_barycenter(Y, t_y=None, weights=None, lr: float = 5e-3,
 
     centroid = INRCentroid(d, c_freq, c_hidden, c_layers).to(device)
     bank = WarpingBank(n, warp_n, device)
+    if init_phi is not None:
+        bank.params["a"] = torch.as_tensor(raw_from_phi(_phi_on(init_phi, warp_n)),
+                                           dtype=torch.float32,
+                                           device=device).requires_grad_(True)
     tag = "inr" if c_freq > 0 else "mlp"
 
-    target = torch.as_tensor(euclidean_barycenter(Yn, weights),
+    target = torch.as_tensor(euclidean_barycenter(Yn, weights) if init is None
+                             else _one_series(init),
                              dtype=torch.float32, device=device)
     init_mse = _fit_inr_to_series(centroid, target, t_y, n_steps=init_steps)
     if verbose:
@@ -239,7 +298,8 @@ def fastcdtw_inr_barycenter(Y, t_y=None, weights=None, lr: float = 5e-3,
 
     ok, worst = check_monotone(objective, rtol=5e-2)
     info = {"objective": objective, "phi": phi, "t_phi": t_y.cpu().numpy(),
-            "init_mse": init_mse, "init_label": "Euclidean mean",
+            "init_mse": init_mse,
+            "init_label": "Euclidean mean" if init is None else "given",
             "monotone": ok, "worst_increase": worst,
             "solver": f"fastcdtw_{tag}", "c_freq": c_freq, "c_hidden": c_hidden,
             "c_layers": c_layers, "centroid": centroid, "bank": bank}
@@ -250,10 +310,11 @@ def fastcdtw_vector_barycenter(Y, t_y=None, weights=None, lr: float = 1e-3,
                             n_steps: int = 500, n_outer: int = 15, c_n: int = 0,
                             warp_n: int = 0, seed: int = 42, dtype=torch.float32,
                             device: str | torch.device = "cpu", chunk: int = 0,
-                            verbose: bool = True):
+                            verbose: bool = True, init=None, init_phi=None):
     """FastCDTW barycenter, free-vector centroid, exact integral; ``warp_n``
     phi knots (0 = one per timestamp), one per sample reproducing a DTW
-    staircase.
+    staircase. ``init`` / ``init_phi``: centroid and (N, T) warpings to start
+    from (default: Euclidean mean, identity).
     """
     device = torch.device(device)
     dtype = getattr(torch, dtype) if isinstance(dtype, str) else dtype
@@ -270,14 +331,18 @@ def fastcdtw_vector_barycenter(Y, t_y=None, weights=None, lr: float = 1e-3,
              else torch.linspace(0.0, 1.0, warp_n, device=device, dtype=dtype))
     t_c = t_y if not c_n else torch.linspace(0.0, 1.0, c_n, device=device, dtype=dtype)
 
-    C0 = euclidean_barycenter(Yn, weights)
+    C0 = euclidean_barycenter(Yn, weights) if init is None else _one_series(init)
     C = torch.as_tensor(C0, dtype=dtype, device=device).unsqueeze(0)
     if c_n:
         C = interp_batch(t_y, C, t_c.unsqueeze(0))
     C = C.clone().requires_grad_(True)
 
-    raw = torch.zeros(n, len(t_phi) - 1, device=device, dtype=dtype,
-                      requires_grad=True)
+    if init_phi is None:
+        raw = torch.zeros(n, len(t_phi) - 1, device=device, dtype=dtype,
+                          requires_grad=True)
+    else:
+        raw = torch.as_tensor(raw_from_phi(_phi_on(init_phi, len(t_phi))),
+                              dtype=dtype, device=device).requires_grad_(True)
     series_idx = torch.arange(n, device=device)
     cluster_idx = torch.zeros(n, dtype=torch.long, device=device)
 

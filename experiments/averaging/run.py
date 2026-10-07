@@ -20,7 +20,7 @@ METHODS = {
     "dtw":       ("DTW (DBA)", "#EE854A"),
     "softdtw":   ("Soft-DTW", "#6ACC64"),
     "fastcdtw_inr": ("FastCDTW (INR, MC)", "#D65F5F"),
-    "fastcdtw_vec": ("FastCDTW (vector, exact)", "#956CB4"),
+    "fastcdtw_vec": ("FastCDTW (vector, PL)", "#956CB4"),
     "fastcdtw_vec_mc": ("FastCDTW (vector, MC)", "#8C613C"),
 }
 

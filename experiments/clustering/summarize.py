@@ -53,12 +53,17 @@ def render(matrix: np.ndarray, methods: list[str], n: int, tolerance: float) -> 
     return "\n".join(lines)
 
 
-def render_accuracies(acc, datasets, methods) -> str:
+def render_accuracies(acc, datasets, methods, tolerance: float) -> str:
+    """Per-dataset table; '*' marks every method within `tolerance` of the row's
+    best, compared on the printed 3-decimal values so the marks can be checked
+    from the table itself (this is the bold rule of the paper's appendix tables)."""
     head = f"{'dataset':<28}" + "".join(f"{LABEL.get(m, m):>10}" for m in methods)
     lines = [head, "-" * len(head)]
     for d in sorted(datasets):
-        best = max(acc[d][m] for m in methods)
-        cells = "".join(f"{acc[d][m]:>9.3f}" + ("*" if acc[d][m] == best else " ")
+        shown = {m: round(acc[d][m], 3) for m in methods}
+        best = max(shown.values())
+        cells = "".join(f"{acc[d][m]:>9.3f}"
+                        + ("*" if shown[m] >= tolerance * best - 1e-9 else " ")
                         for m in methods)
         lines.append(f"{d:<28}" + cells)
     means = [np.mean([acc[d][m] for d in datasets]) for m in methods]
@@ -91,7 +96,7 @@ def main():
 
     matrix = win_matrix(acc, datasets, methods, args.tolerance)
     table = render(matrix, methods, len(datasets), args.tolerance)
-    per_ds = render_accuracies(acc, datasets, methods)
+    per_ds = render_accuracies(acc, datasets, methods, args.tolerance)
 
     print(table)
     if incomplete:

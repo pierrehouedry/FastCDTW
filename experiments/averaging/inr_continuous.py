@@ -14,7 +14,7 @@ METHODS = {
     "euclidean": ("Euclidean Mean", "#4878CF"),
     "dtw": ("DTW", "#EE854A"),
     "softdtw": ("Soft-DTW", "#6ACC64"),
-    "fastcdtw_vec": ("FastCDTW (vector, exact)", "#956CB4"),
+    "fastcdtw_vec": ("FastCDTW (vector, PL)", "#956CB4"),
     "fastcdtw_inr": ("FastCDTW (INR, MC)", "#D65F5F"),
 }
 DISCRETE = ["euclidean", "dtw", "softdtw", "fastcdtw_vec"]
@@ -104,10 +104,12 @@ def main() -> None:
     print(f"-> {out_dir / (stem + '.npz')}")
 
 
-def plot(t, bary, t_dense, C_dense, out: Path, ms: float = 2.5) -> None:
+def plot(t, bary, t_dense, C_dense, out: Path, ms: float = 2.5,
+         ystep: float | None = None) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.ticker
 
     matplotlib.rcParams.update({
         "font.family": "serif",
@@ -124,6 +126,8 @@ def plot(t, bary, t_dense, C_dense, out: Path, ms: float = 2.5) -> None:
     label, colour = METHODS["fastcdtw_inr"]
     ax.plot(t_dense, C_dense, color=colour, lw=1.6, label=label, zorder=3)
 
+    if ystep:                             # one y label every ystep
+        ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(ystep))
     ax.set_xlabel(r"$t$")
     ax.legend(fontsize=8, frameon=False)
     ax.grid(alpha=0.25)

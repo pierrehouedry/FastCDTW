@@ -33,11 +33,17 @@ ROW_METHODS = [
     ("euclidean", "Euclidean Mean", "#4878CF"),
     ("dtw", "DTW", "#EE854A"),
     ("softdtw", "Soft-DTW", "#6ACC64"),
-    ("fastcdtw_vec", "FastCDTW (vector, exact)", "#956CB4"),
+    ("fastcdtw_vec", "FastCDTW (vector, PL)", "#956CB4"),
     ("fastcdtw_inr", "FastCDTW (INR, MC)", "#D65F5F"),
 ]
 EXTRA_METHODS = [("fastcdtw_vec_mc", "FastCDTW (vector, MC)", "#8C613C")]
 ALL_METHODS = ROW_METHODS + EXTRA_METHODS
+# total gap between grid panels, as a fraction of the figure width / height
+GRID_WSPACE, GRID_HSPACE = 0.06, 0.03
+# grid drawn at its printed size: AISTATS \textwidth (6.75 in) x height, so the
+# paper includes it at width=\textwidth with no scaling; sizes below are in pt
+GRID_WIDTH_IN, GRID_HEIGHT_IN = 6.75, 2.3
+GRID_TITLE_PT, GRID_LW, GRID_LW_SERIES = 7, 1.1, 0.45
 
 
 def style():
@@ -114,36 +120,54 @@ def bare(ax):
         s.set_visible(False)
 
 
-def panel(ax, Y, curve, label, colour):
+def panel(ax, Y, curve, label, colour, lw=2.0, lw_series=0.8, fontsize=10):
     t = np.arange(Y.shape[1])
     for y in Y:
-        ax.plot(t, y[:, 0], color="0.78", lw=0.8, zorder=1)
-    ax.plot(*curve, color=colour, lw=2.0, zorder=2)
-    ax.set_title(label, fontsize=10)
+        ax.plot(t, y[:, 0], color="0.78", lw=lw_series, zorder=1)
+    ax.plot(*curve, color=colour, lw=lw, zorder=2)
+    ax.set_title(label, fontsize=fontsize)
     bare(ax)
+
+
+def load_all() -> dict:
+    """{dataset: (result dict with overrides applied, averaged series)}."""
+    data = {}
+    for ds, fname in DATASETS:
+        res = apply_softdtw_gamma(ds, apply_overrides(ds, load(fname)))
+        data[ds] = (res, series_of(res))
+    return data
+
+
+def plot_grid(data: dict, stem: str = "barycenters_grid"):
+    """Datasets x methods grid, saved at exactly GRID_WIDTH_IN x GRID_HEIGHT_IN."""
+    nrow, ncol = len(DATASETS), len(ROW_METHODS)
+    fig, axes = plt.subplots(nrow, ncol, figsize=(GRID_WIDTH_IN, GRID_HEIGHT_IN),
+                             squeeze=False, layout="constrained")
+    fig.get_layout_engine().set(w_pad=0.0, h_pad=0.0, wspace=GRID_WSPACE,
+                                hspace=GRID_HSPACE)
+    for i, (ds, _) in enumerate(DATASETS):
+        res, Y = data[ds]
+        for j, (key, label, colour) in enumerate(ROW_METHODS):
+            ax = axes[i][j]
+            panel(ax, Y, curve_of(res, key, Y.shape[1]), "", colour,
+                  lw=GRID_LW, lw_series=GRID_LW_SERIES)
+            ax.margins(x=0.01, y=0.03)
+            if i == 0:
+                ax.set_title(label, fontsize=GRID_TITLE_PT, pad=2)
+    for ext in ("png", "pdf"):
+        # no bbox_inches="tight": it would change the page size
+        fig.savefig(FIGS / f"{stem}.{ext}", dpi=300)
+    plt.close(fig)
+    print(f"-> {FIGS / (stem + '.pdf')}")
 
 
 def main():
     style()
     FIGS.mkdir(parents=True, exist_ok=True)
-    data = {}
-    for ds, fname in DATASETS:
-        res = apply_softdtw_gamma(ds, apply_overrides(ds, load(fname)))
-        data[ds] = (res, series_of(res))
+    data = load_all()
+    plot_grid(data)
 
-    nrow, ncol = len(DATASETS), len(ROW_METHODS)
-    fig, axes = plt.subplots(nrow, ncol, figsize=(2.6 * ncol, 2.1 * nrow),
-                             squeeze=False)
-    for i, (ds, _) in enumerate(DATASETS):
-        res, Y = data[ds]
-        for j, (key, label, colour) in enumerate(ROW_METHODS):
-            panel(axes[i][j], Y, curve_of(res, key, Y.shape[1]),
-                  label if i == 0 else "", colour)
-    fig.tight_layout()
-    fig.savefig(FIGS / "barycenters_grid.png", dpi=200)
-    fig.savefig(FIGS / "barycenters_grid.pdf")
-    plt.close(fig)
-
+    ncol = len(ROW_METHODS)
     for ds, _ in DATASETS:
         res, Y = data[ds]
         fig, axes = plt.subplots(1, ncol, figsize=(2.6 * ncol, 2.3), squeeze=False)

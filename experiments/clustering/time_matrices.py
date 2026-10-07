@@ -5,14 +5,11 @@ Wall-clock of ONE cross-distance matrix per (dataset, method).
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import platform
 import statistics as st
 import time
 from pathlib import Path
-
-import numpy as np
 
 from checkpoint import read_locked, update_json
 from data import load_ucr_split

@@ -43,8 +43,29 @@ submit_*.sh
 # dev helper that reads files outside this repo
 experiments/clustering/import_baselines.py
 
+# Test suite (kept local)
+tests/
+
 # Local notes
 NOTES.md
 
 # The packaged archive itself
 *.zip
+
+# ---------------------------------------------------------------------------
+# Kept local, left out of the released package (release zip of 2026-10-07)
+# ---------------------------------------------------------------------------
+# Toy data: experiments/averaging/make_toy.py regenerates it byte for byte
+data/
+# Per-experiment notes and helpers
+experiments/*/README.md
+experiments/clustering/run_all.sh
+# Dev scripts not in the release. seeds.py + seeds_table.py make Table 2 and
+# cd_diagram.py makes Figure 4: delete these lines to ship them.
+experiments/averaging/seeds.py
+experiments/averaging/seeds_table.py
+experiments/averaging/lr_probe.py
+experiments/averaging/plot_grid_ecgwarm.py
+experiments/averaging/plot_inrcont_ecg.py
+experiments/clustering/cd_diagram.py
+_to_delete/
