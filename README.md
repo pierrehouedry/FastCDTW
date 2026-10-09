@@ -5,9 +5,9 @@ FastCDTW computes Continuous DTW (CDTW) [1], the continuous-time counterpart of 
 The cost of a warping is computed in closed form for piecewise-linear (PL) warpings, or by an unbiased Monte Carlo (MC) estimate for smooth ones such as implicit neural representations [3]; both give gradients with respect to the warping and the series, and run batched on GPU.
 `fastcdtw/` is the library; `experiments/averaging/` allows to re-run the experiments from the article.
 
-![Barycenters of three synthetic families](figures/barycenters_grid.png)
+![Barycenter fits of three synthetic families](figures/barycenters_fit.gif)
 
-*Figure 3 of the paper: barycenters of `accel` (top), `ecg` (middle) and `rate` (bottom). Grey: the averaged series.*
+*Fitting of the barycenter of `accel` (top), `ecg` (middle) and `rate` (bottom) by FastCDTW with a free-vector centroid and the exact PL integral (left), a free-vector centroid with Monte Carlo (middle), and an INR centroid with Monte Carlo (right). Grey: the averaged series. Every fit starts from the Euclidean mean and runs 30 alternations of warping and centroid updates.*
 
 ## References
 
